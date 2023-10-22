@@ -15,10 +15,10 @@ const frontEndIP = process.env.FRONT_END_IP;
 const mq_queue = process.env.RABBITMQ_QUEUE;
 
 const cors_option = {
-  origin: frontEndIP,
-  allowedHeaders: "Content-Type, Authorization",
-  credentials: true,
-  maxAge: 600,
+	origin: frontEndIP,
+	allowedHeaders: "Content-Type, Authorization",
+	credentials: true,
+	maxAge: 600,
 };
 
 app.use(cors(cors_option));
@@ -37,13 +37,11 @@ const redisClient = await createRedisClient();
 const clients = new Map();
 
 // create a route for server sent events
-app.get("/events", async (req, res) =>
-  getServerSentEvents(req, res, clients, redisClient),
-);
+app.get("/events", async (req, res) => getServerSentEvents(req, res, clients, redisClient));
 
 // start consuming messages from rabbitmq
 mq_consumer(channel, clients, redisClient);
 
 app.listen(port, () => {
-  console.log("app start listening...");
+	console.log("app start listening...");
 });

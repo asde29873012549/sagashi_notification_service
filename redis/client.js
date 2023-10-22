@@ -6,12 +6,20 @@ dotenv.config();
 const { REDIS_URL } = process.env;
 
 const createRedisClient = async () => {
-  const redisClient = createClient();
-  await redisClient.connect(REDIS_URL);
+	try {
+		const redisClient = createClient();
+		await redisClient.connect(REDIS_URL);
 
-  redisClient.on("error", (err) => console.log("Redis Client Error", err));
+		redisClient.on("error", (err) => {
+			throw new Error(err);
+		});
+		redisClient.on("connect", () => console.log("Redis Client Connected"));
 
-  return redisClient;
+		return redisClient;
+	} catch (err) {
+		console.log("Redis Client Error", err);
+		return null;
+	}
 };
 
 export default createRedisClient;
