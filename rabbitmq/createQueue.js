@@ -18,6 +18,7 @@ export default async function createQueue() {
 		"notification.like",
 		"notification.follow",
 		"notification.uploadListing",
+		"notification.message",
 		"notification.order",
 	];
 

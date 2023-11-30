@@ -33,17 +33,17 @@ export default async function getServerSentEvents(req, res, clients, redisClient
 
 	const jwtToken = payload.accessToken;
 
-	// fetch user subscibedTopics from main backend service
+	// fetch user subscriber from main backend service
 	try {
-		const response = await fetch(`${BACKEND_SERVER}/notification/subscribedTopics`, {
+		const response = await fetch(`${BACKEND_SERVER}/notification/subscriber`, {
 			method: "GET",
 			headers: {
 				Authorization: `Bearer ${jwtToken}`,
 			},
 		});
 
-		const subscribedTopics = await response.json();
-		const followed_users = subscribedTopics.data;
+		const subscriber = await response.json();
+		const followed_users = subscriber.status === "success" ? subscriber.data : null;
 
 		// add client res object to Map store with username as key
 		if (clients.has(payload.username)) clients.delete(payload.username);
@@ -51,8 +51,9 @@ export default async function getServerSentEvents(req, res, clients, redisClient
 
 		// add client to redis store for tracking
 		await redisClient.sAdd("connectedClients", payload.username);
+
 		// add all followed users as keys to redis store and the user who followed them into the SET values
-		const followedUsers = followed_users?.map(
+		const followedUsers = followed_users && followed_users.map(
 			(followed_user) => () =>
 				redisClient.sAdd(`user:${followed_user.user_name}:followers`, payload.username),
 		);

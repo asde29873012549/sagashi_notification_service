@@ -26,6 +26,14 @@ const worker_func = {
 			});
 		}
 	},
+	"notification.message": async (clients, redisClient, message) => {
+		const receiver = message.sender_name === message.seller_name ? message.buyer_name : message.seller_name;
+		const isMember = await redisClient.SISMEMBER("connectedClients", receiver);
+		if (isMember) {
+			const responseObject = clients.get(receiver);
+			if (responseObject) responseObject.write(`data:${JSON.stringify(message)}\n\n`);
+		}
+	},
 	/* "notification.order": async (clients, redisClient, message) => {
 		
 	}, */
