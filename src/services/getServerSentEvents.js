@@ -23,18 +23,21 @@ export default async function getServerSentEvents(req, res, clients, redisClient
 	// get nextauth token from cookies
 	const cookies = new Cookies(req, res);
 	const NextAuthJwtToken = cookies.get("next-auth.session-token");
+	let payload = null;
 
-	const key = await getDerivedEncryptionKey(JWT_TOKEN_SECRET);
+	try {
+		const key = await getDerivedEncryptionKey(JWT_TOKEN_SECRET);
 
-	// decrypt jwt token to get username
-	const { payload } = await jwtDecrypt(NextAuthJwtToken, key, {
-		clockTolerance: 15,
-	});
+		// decrypt jwt token to get username
+		const result = await jwtDecrypt(NextAuthJwtToken, key, {
+			clockTolerance: 15,
+		});
 
-	const jwtToken = payload.accessToken;
+		payload = result.payload;
+
+		const jwtToken = payload.accessToken;
 
 	// fetch user subscriber from main backend service
-	try {
 		const response = await fetch(`${BACKEND_SERVER}/notification/subscriber`, {
 			method: "GET",
 			headers: {
