@@ -15,7 +15,8 @@ const frontEndIP = process.env.FRONT_END_IP;
 
 const cors_option = {
 	origin: frontEndIP,
-	allowedHeaders: "Content-Type, Authorization",
+	methods: "GET,OPTIONS",
+	allowedHeaders: ["Content-Type", "Authorization"],
 	credentials: true,
 	maxAge: 600,
 };

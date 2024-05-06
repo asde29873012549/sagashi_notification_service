@@ -46,6 +46,7 @@ export default async function getServerSentEvents(req, res, redisClient) {
 		});
 
 		const subscribedUserApiRes = await response.json();
+		console.log("get subscribed user list", subscribedUserApiRes);
 		// List of users followed by the current user
 		const listOfFollowedUser = subscribedUserApiRes.status === "success" ? subscribedUserApiRes.data : null;
 
