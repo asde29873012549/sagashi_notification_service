@@ -15,7 +15,7 @@
 	"license": "ISC",
 	"dependencies": {
 		"@panva/hkdf": "^1.1.1",
-		"amqplib": "^0.10.3",
+		"amqplib": "^0.10.4",
 		"cookies": "^0.8.0",
 		"cors": "^2.8.5",
 		"dotenv": "^16.3.1",
