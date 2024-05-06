@@ -13,7 +13,7 @@ async function getDerivedEncryptionKey(secret) {
 	return hkdf("sha256", secret, "", JWT_INFO, 32);
 }
 
-export default async function getServerSentEvents(req, res, clients, redisClient) {
+export default async function getServerSentEvents(req, res, redisClient) {
 	// set headers for server sent events
 	res.setHeader("Content-Type", "text/event-stream");
 	res.setHeader("Cache-Control", "no-cache");
@@ -37,7 +37,7 @@ export default async function getServerSentEvents(req, res, clients, redisClient
 
 		const jwtToken = payload.accessToken;
 
-	// fetch user subscriber from main backend service
+		// Retrieve the list of users followed by the current user from the main backend service.
 		const response = await fetch(`${BACKEND_SERVER}/notification/subscriber`, {
 			method: "GET",
 			headers: {
@@ -45,18 +45,31 @@ export default async function getServerSentEvents(req, res, clients, redisClient
 			},
 		});
 
-		const subscriber = await response.json();
-		const followed_users = subscriber.status === "success" ? subscriber.data : null;
+		const subscribedUserApiRes = await response.json();
+		// List of users followed by the current user
+		const listOfFollowedUser = subscribedUserApiRes.status === "success" ? subscribedUserApiRes.data : null;
 
-		// add client res object to Map store with username as key
-		if (clients.has(payload.username)) clients.delete(payload.username);
-		clients.set(payload.username, res);
+		// create redis pub/sub channel
+		const redisPubSub = redisClient.duplicate();
 
-		// add client to redis store for tracking
+		req.on("close", async () => {
+			await redisPubSub.unsubscribe();
+			await redisPubSub.disconnect();
+			await redisClient.sRem("connectedClients", payload.username);
+			await redisClient.del(`user:${payload.username}:followers`);
+		});
+
+        await redisPubSub.connect();
+		// subscribe to current connected client specific channel
+        await redisPubSub.subscribe(`messages:${payload.username}`, (message) => {
+            res.write(`data: ${message}\n\n`);
+        });
+
+		// add current connected client to redis store for tracking
 		await redisClient.sAdd("connectedClients", payload.username);
 
 		// add all followed users as keys to redis store and the user who followed them into the SET values
-		const followedUsers = followed_users && followed_users.map(
+		const followedUsers = listOfFollowedUser && listOfFollowedUser.map(
 			(followed_user) => () =>
 				redisClient.sAdd(`user:${followed_user.user_name}:followers`, payload.username),
 		);
@@ -64,12 +77,6 @@ export default async function getServerSentEvents(req, res, clients, redisClient
 		if (followedUsers) await Promise.all(followedUsers.map((followedUser) => followedUser()));
 		console.log("finish adding all followed users to redis store");
 	} catch (err) {
-		console.log(err);
+		console.log("serverSentEventEndpointError", err);
 	}
-
-	req.on("close", async () => {
-		clients.delete(payload.username);
-		await redisClient.sRem("connectedClients", payload.username);
-		await redisClient.del(`user:${payload.username}:followers`);
-	});
 }

@@ -30,14 +30,11 @@ const { channel, queues } = await createQueue();
 // connect to redis instance
 const redisClient = await createRedisClient();
 
-// create a map to store connected clients
-const clients = new Map();
-
 // create a route for server sent events
-app.get("/events", async (req, res) => getServerSentEvents(req, res, clients, redisClient));
+app.get("/events", async (req, res) => getServerSentEvents(req, res, redisClient));
 
 // start consuming messages from rabbitmq
-mq_consumer(channel, queues, clients, redisClient);
+mq_consumer(channel, queues, redisClient);
 
 app.listen(port, () => {
 	console.log("app start listening...");

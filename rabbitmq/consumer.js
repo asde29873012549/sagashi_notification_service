@@ -3,43 +3,39 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const worker_func = {
-	"notification.like": async (clients, redisClient, message) => {
+	"notification.like": async (redisClient, message) => {
 		const isMember = await redisClient.SISMEMBER("connectedClients", message.seller_name);
 		if (isMember) {
-			const responseObject = clients.get(message.seller_name);
-			if (responseObject) responseObject.write(`data:${JSON.stringify(message)}\n\n`);
+			redisClient.publish(`messages:${message.seller_name}`, JSON.stringify(message));
 		}
 	},
-	"notification.follow": async (clients, redisClient, message) => {
+	"notification.follow": async (redisClient, message) => {
 		const isMember = await redisClient.SISMEMBER("connectedClients", message.followed_user);
 		if (isMember) {
-			const responseObject = clients.get(message.followed_user);
-			if (responseObject) responseObject.write(`data:${JSON.stringify(message)}\n\n`);
+			redisClient.publish(`messages:${message.followed_user}`, JSON.stringify(message));
 		}
 	},
-	"notification.uploadListing": async (clients, redisClient, message) => {
+	"notification.uploadListing": async (redisClient, message) => {
 		const followers = await redisClient.SMEMBERS(`user:${message.username}:followers`);
 		if (followers) {
 			followers.forEach((follower) => {
-				const responseObject = clients.get(follower);
-				if (responseObject) responseObject.write(`data:${JSON.stringify(message)}\n\n`);
+				redisClient.publish(`messages:${follower}`, JSON.stringify(message));
 			});
 		}
 	},
-	"notification.message": async (clients, redisClient, message) => {
+	"notification.message": async (redisClient, message) => {
 		const receiver = message.sender_name === message.seller_name ? message.buyer_name : message.seller_name;
 		const isMember = await redisClient.SISMEMBER("connectedClients", receiver);
 		if (isMember) {
-			const responseObject = clients.get(receiver);
-			if (responseObject) responseObject.write(`data:${JSON.stringify(message)}\n\n`);
+			redisClient.publish(`messages:${receiver}`, JSON.stringify(message));
 		}
 	},
-	/* "notification.order": async (clients, redisClient, message) => {
+	/* "notification.order": async (redisClient, message) => {
 		
 	}, */
 };
 
-async function mq_consumer(channel, queues, clients, redisClient) {
+async function mq_consumer(channel, queues, redisClient) {
 	try {
 		queues.forEach((queue) => {
 			console.log(`start consuming queue ${queue}`);
@@ -50,7 +46,7 @@ async function mq_consumer(channel, queues, clients, redisClient) {
 						const message = JSON.parse(msg.content.toString());
 						console.log(message, "message");
 						console.log(msg.fields.routingKey, "routingKey");
-						worker_func[`${msg.fields.routingKey}`](clients, redisClient, message);
+						worker_func[`${msg.fields.routingKey}`](redisClient, message);
 
 						channel.ack(msg);
 					} catch (err) {

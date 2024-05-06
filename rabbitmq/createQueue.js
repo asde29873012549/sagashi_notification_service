@@ -6,7 +6,9 @@ dotenv.config();
 const mq_exchange = process.env.RABBITMQ_EXCHANGE;
 
 export default async function createQueue() {
+	console.log("connecting to rabbitmq instance");
 	const connection = await mq_connect();
+	console.log(`creating channel and queues for exchange ${mq_exchange}`);
 	const channel = await connection.createChannel();
 
 	// Make sure the exchange is durable
