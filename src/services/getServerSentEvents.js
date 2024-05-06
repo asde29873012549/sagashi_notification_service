@@ -57,6 +57,7 @@ export default async function getServerSentEvents(req, res, redisClient) {
 			await redisPubSub.disconnect();
 			await redisClient.sRem("connectedClients", payload.username);
 			await redisClient.del(`user:${payload.username}:followers`);
+			await redisClient.disconnect();
 		});
 
         await redisPubSub.connect();

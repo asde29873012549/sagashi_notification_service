@@ -8,8 +8,13 @@ const { REDIS_URL } = process.env;
 const createRedisClient = async () => {
 	try {
 		const redisClient = createClient();
-		console.log("connecting to redis client")
-		await redisClient.connect(REDIS_URL);
+		console.log("connecting to redis client");
+		await redisClient.connect({
+			url: REDIS_URL,
+		});
+
+		if (!redisClient.isReady) throw new Error("redis client is not ready");
+		console.log("redis client is ready");
 
 		redisClient.on("error", (err) => {
 			throw new Error(err);
