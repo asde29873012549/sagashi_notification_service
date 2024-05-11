@@ -10,16 +10,16 @@ const createRedisClient = async () => {
 		const redisClient = createClient({
 			url: REDIS_URL,
 		});
-		console.log("connecting to redis client");
-		await redisClient.connect();
+		console.log("connecting to redis client...");
 
-		if (!redisClient.isReady) throw new Error("redis client is not ready");
-		console.log("redis client is ready");
-
+		redisClient.on("connect", () => console.log("Redis Client Connected"));
+		redisClient.on("ready", () => console.log("Redis client is ready to execute commands"));
 		redisClient.on("error", (err) => {
 			throw new Error(err);
 		});
-		redisClient.on("connect", () => console.log("Redis Client Connected"));
+		redisClient.on("end", () => console.log('Redis connection closed'));
+
+		await redisClient.connect();
 
 		return redisClient;
 	} catch (err) {

@@ -26,6 +26,12 @@ export default async function getServerSentEvents(req, res, redisClient) {
 	let payload = null;
 
 	try {
+
+		if (!redisClient.isOpen || !redisClient.isReady) {
+			console.log("redis client not ready, reconnecting...")
+			await redisClient.connect();
+		}
+
 		const key = await getDerivedEncryptionKey(JWT_TOKEN_SECRET);
 
 		// decrypt jwt token to get username
