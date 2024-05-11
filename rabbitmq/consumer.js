@@ -4,18 +4,30 @@ dotenv.config();
 
 const worker_func = {
 	"notification.like": async (redisClient, message) => {
+		if (!redisClient.isOpen || !redisClient.isReady) {
+			console.log("redis client not ready, reconnecting...");
+			await redisClient.connect();
+		}
 		const isMember = await redisClient.SISMEMBER("connectedClients", message.seller_name);
 		if (isMember) {
 			redisClient.publish(`messages:${message.seller_name}`, JSON.stringify(message));
 		}
 	},
 	"notification.follow": async (redisClient, message) => {
+		if (!redisClient.isOpen || !redisClient.isReady) {
+			console.log("redis client not ready, reconnecting...");
+			await redisClient.connect();
+		}
 		const isMember = await redisClient.SISMEMBER("connectedClients", message.followed_user);
 		if (isMember) {
 			redisClient.publish(`messages:${message.followed_user}`, JSON.stringify(message));
 		}
 	},
 	"notification.uploadListing": async (redisClient, message) => {
+		if (!redisClient.isOpen || !redisClient.isReady) {
+			console.log("redis client not ready, reconnecting...");
+			await redisClient.connect();
+		}
 		const followers = await redisClient.SMEMBERS(`user:${message.username}:followers`);
 		if (followers) {
 			followers.forEach((follower) => {
@@ -24,6 +36,10 @@ const worker_func = {
 		}
 	},
 	"notification.message": async (redisClient, message) => {
+		if (!redisClient.isOpen || !redisClient.isReady) {
+			console.log("redis client not ready, reconnecting...");
+			await redisClient.connect();
+		}
 		const receiver = message.sender_name === message.seller_name ? message.buyer_name : message.seller_name;
 		const isMember = await redisClient.SISMEMBER("connectedClients", receiver);
 		if (isMember) {

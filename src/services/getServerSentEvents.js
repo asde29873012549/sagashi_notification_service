@@ -2,6 +2,8 @@ import * as dotenv from "dotenv";
 import Cookies from "cookies";
 import { jwtDecrypt } from "jose";
 import hkdf from "@panva/hkdf";
+import createRedisClient from "../../redis/client.js";
+import mq_consumer from "../../rabbitmq/consumer.js";
 
 dotenv.config();
 
@@ -13,12 +15,18 @@ async function getDerivedEncryptionKey(secret) {
 	return hkdf("sha256", secret, "", JWT_INFO, 32);
 }
 
-export default async function getServerSentEvents(req, res, redisClient) {
+export default async function getServerSentEvents(req, res, channel, queues) {
 	// set headers for server sent events
 	res.setHeader("Content-Type", "text/event-stream");
 	res.setHeader("Cache-Control", "no-cache");
 	res.setHeader("Connection", "keep-alive");
 	res.flushHeaders();
+
+	// connect to redis instance
+	const redisClient = await createRedisClient();
+
+	// start consuming messages from rabbitmq
+	mq_consumer(channel, queues, redisClient);
 
 	// get nextauth token from cookies
 	const cookies = new Cookies(req, res);
@@ -26,12 +34,6 @@ export default async function getServerSentEvents(req, res, redisClient) {
 	let payload = null;
 
 	try {
-
-		if (!redisClient.isOpen || !redisClient.isReady) {
-			console.log("redis client not ready, reconnecting...")
-			await redisClient.connect();
-		}
-
 		const key = await getDerivedEncryptionKey(JWT_TOKEN_SECRET);
 
 		// decrypt jwt token to get username
@@ -61,10 +63,10 @@ export default async function getServerSentEvents(req, res, redisClient) {
 
 		req.on("close", async () => {
 			await redisPubSub.unsubscribe();
-			await redisPubSub.disconnect();
+			await redisPubSub.quit();
 			await redisClient.sRem("connectedClients", payload.username);
 			await redisClient.del(`user:${payload.username}:followers`);
-			await redisClient.disconnect();
+			await redisClient.quit();
 		});
 
         await redisPubSub.connect();

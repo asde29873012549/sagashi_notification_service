@@ -2,8 +2,6 @@ import * as dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import createQueue from "../rabbitmq/createQueue.js";
-import createRedisClient from "../redis/client.js";
-import mq_consumer from "../rabbitmq/consumer.js";
 import getServerSentEvents from "./services/getServerSentEvents.js";
 
 dotenv.config();
@@ -28,14 +26,9 @@ app.use(express.urlencoded({ extended: true }));
 // connect to rabbitmq instance and create channel & queues
 const { channel, queues } = await createQueue();
 
-// connect to redis instance
-const redisClient = await createRedisClient();
-
 // create a route for server sent events
-app.get("/events", async (req, res) => getServerSentEvents(req, res, redisClient));
+app.get("/events", async (req, res) => getServerSentEvents(req, res, channel, queues));
 
-// start consuming messages from rabbitmq
-mq_consumer(channel, queues, redisClient);
 
 app.listen(port, () => {
 	console.log("app start listening...");
